@@ -1,0 +1,82 @@
+[build-system]
+# >=1.27, а не >=1.18: PEP 639 (`license = "MIT"` строкой + `license-files`
+# списком) hatchling понимает только с 1.27.0. На 1.24.x сборка падает
+# «Field `project.license-files` must be a table» — с изоляцией это незаметно,
+# потому что pip тянет свежий hatchling, но в закреплённом/офлайн окружении и
+# при --no-build-isolation пакет было бы не собрать.
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "vdsok"
+dynamic = ["version"]
+description = "Official Python SDK for the VDSok Client API v1 (servers, domains, balance, invoices, webhooks)."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "VDSok", email = "support@vdsok.guru" }]
+keywords = ["vdsok", "vds", "vps", "hosting", "api", "sdk", "domains"]
+# Классификатора "License :: OSI Approved :: MIT License" здесь нет намеренно:
+# по PEP 639 он несовместим с `license = "MIT"` (Metadata-Version 2.4 несёт
+# License-Expression), и PyPI отклоняет загрузку с обоими полями сразу.
+# `twine check` эту пару не ловит, ошибка вылезла бы только на `twine upload`.
+classifiers = [
+  # Beta, а не Production/Stable: API v1 выкатывается с `api_enabled=0` и
+  # публичной эксплуатации ещё не видел.
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Internet :: WWW/HTTP",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Typing :: Typed",
+]
+# httpx даёт синхронный и асинхронный клиент из одной кодовой базы и не тянет
+# лишних зависимостей; ниже 0.23 нет стабильного API Timeout/Transport.
+dependencies = ["httpx>=0.23,<1.0"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.0",
+  "pytest-asyncio>=0.21",
+  "respx>=0.20",
+  # только для tests/test_parity.py: сверяет таблицу операций и модели ответов
+  # с docs/openapi/vdsok-client-api-v1.yaml. В рантайме SDK не нужен.
+  "pyyaml>=5.4",
+]
+
+[project.urls]
+# Организация в нижнем регистре — так она записана в плане (github.com/vdsok) и
+# так же должен её писать backend/tools/sdk_export.py: адреса попадают в
+# неизменяемые метаданные релиза на PyPI, переименовать их потом нельзя.
+Homepage = "https://vdsok.guru/developers"
+Documentation = "https://vdsok.guru/developers"
+Repository = "https://github.com/VDSok/sdk-python"
+"Bug Tracker" = "https://github.com/VDSok/sdk-python/issues"
+Changelog = "https://github.com/VDSok/sdk-python/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/vdsok/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vdsok"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/vdsok", "tests", "README.md", "CHANGELOG.md", "LICENSE", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+# pythonpath = src позволяет гонять тесты без установки пакета (например, в CI
+# сразу после checkout); asyncio_mode = auto избавляет от декораторов на каждом
+# async-тесте.
+pythonpath = ["src"]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["error::DeprecationWarning:vdsok.*"]
